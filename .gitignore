@@ -22,3 +22,7 @@ models/**/*
 # Ambiente
 .env
 .DS_Store
+
+# Predições geradas
+data/predictions/
+reports/metrics.json

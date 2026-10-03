@@ -10,26 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - name: ruff check
-        run: uvx ruff check --output-format=github .
-      - name: ruff format
-        run: uvx ruff format --check .
-
-  test:
-    name: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-      - name: Instalar dependências
-        run: uv sync --locked
-      - name: pytest
-        run: uv run pytest --cov=src --cov-report=term-missing
+  # O nome do job precisa ser `ci` (os checks obrigatórios são `ci / lint`, `ci / test`...).
+  # Toda a lógica (lint, testes, conformidade, regra de branch) vive em brunocvs7/ds-workflows.
+  ci:
+    uses: brunocvs7/ds-workflows/.github/workflows/python-ci.yml@v1

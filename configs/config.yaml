@@ -1,5 +1,0 @@
-# Parâmetros do projeto (caminhos, hiperparâmetros, seeds...)
-seed: 42
-data:
-  raw: data/raw
-  processed: data/processed
