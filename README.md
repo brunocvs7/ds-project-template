@@ -28,7 +28,7 @@ make demo
 │   ├── processed/        # dados prontos para modelagem         │
 │   └── predictions/      # saída do pipeline de inferência      ┘
 ├── models/               # model.joblib gerado pelo treino (fora do git)
-├── notebooks/            # exploração: NN-iniciais-descricao.ipynb (ex.: 01-bcv-eda.ipynb)
+├── notebooks/            # exploração (sugestão de nome: 01-bcv-eda.ipynb)
 ├── reports/figures/      # gráficos; reports/metrics.json é gerado pelo treino
 ├── src/ds_project/
 │   ├── paths.py          # caminhos padrão (sobrescrevíveis via .env)
@@ -42,7 +42,7 @@ make demo
 │       └── predict.py    # 🔒 pronto: carrega modelo → MESMA clean/features → predições
 ├── tests/
 │   ├── fixtures/sample_raw.csv   # amostra pequena dos dados (versionada!)
-│   └── test_<módulo>.py          # um arquivo de teste por módulo de src/
+│   └── test_*.py                 # testes unitários
 ├── Makefile · .env.example · .pre-commit-config.yaml · pyproject.toml · uv.lock
 ```
 
@@ -103,7 +103,7 @@ O Makefile e o CI descobrem o nome do pacote sozinhos.
 |---|---|---|
 | **pre-commit** | a cada `git commit` (e no CI) | ruff (lint + format), nbstripout, bloqueio de arquivos >1 MB, chaves privadas, uv.lock sincronizado |
 | **testes** (`tests/`) | `make test` e CI | testes unitários escritos por você |
-| **conformidade** (`ds-check`) | `make check` e CI | estrutura de pastas, nada de dados no git, notebooks limpos e bem nomeados, um teste por módulo, sem caminhos absolutos, dependências declaradas (deptry), pipeline treina + prediz na amostra e é reprodutível com a mesma seed |
+| **conformidade** (`ds-check`) | `make check` e CI | estrutura de pastas, nada de dados no git, notebooks sem outputs, dependências declaradas (deptry), pipeline treina + prediz na amostra e é reprodutível com a mesma seed |
 
 `make ci` roda as três — se passar local, passa no PR.
 
