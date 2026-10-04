@@ -14,7 +14,9 @@ build/
 .ipynb_checkpoints/
 
 # Dados e modelos (versione com DVC/LFS se necessário)
-data/**/*
+# (ignora o conteúdo, mas mantém as pastas e seus .gitkeep)
+data/**
+!data/**/
 !data/**/.gitkeep
 models/**/*
 !models/.gitkeep
