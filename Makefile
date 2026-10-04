@@ -4,7 +4,7 @@
 ENV_FILE := $(if $(wildcard .env),--env-file .env,)
 RUN      := uv run $(ENV_FILE)
 PKG      := $(notdir $(wildcard src/*))
-DS_CHECK ?= uvx --from git+https://github.com/brunocvs7/ds-workflows@v1 ds-check
+DS_CHECK ?= uvx --no-cache --from git+https://github.com/brunocvs7/ds-workflows@v1 ds-check
 SAMPLE   := tests/fixtures/sample_raw.csv
 
 help: ## Lista os comandos
