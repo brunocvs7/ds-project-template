@@ -457,6 +457,8 @@ O ds-check fica em `.github/scripts/ds_check.py`. Ele faz parte do padrão do te
 
 - Não aceita push direto. Todo código entra por **Pull Request**.
 - O PR só pode ser mergeado com **as 4 verificações do CI verdes**.
+- O PR precisa de **1 aprovação** de outra pessoa do time. Um push novo depois da aprovação invalida a aprovação, e é preciso aprovar de novo.
+- Todas as **conversas do review** precisam estar resolvidas.
 - A branch do PR precisa **seguir o padrão de nome** abaixo.
 - O merge é sempre **squash**: o PR inteiro vira um único commit na `main`.
 - A branch é **apagada automaticamente** no GitHub após o merge.
@@ -506,16 +508,19 @@ gh pr create --fill
 # 7. Acompanhe o CI
 gh pr checks --watch
 
-# 8. Com tudo verde, faça o merge (pelo botão no GitHub ou pelo terminal)
+# 8. Peça review a alguém do time e responda os comentários
+gh pr edit --add-reviewer <usuario>
+
+# 9. Com tudo verde e aprovado, faça o merge (pelo botão no GitHub ou pelo terminal)
 gh pr merge --squash
 
-# 9. Volte para a main e limpe a branch local
+# 10. Volte para a main e limpe a branch local
 git switch main
 git pull
 git branch -D feature/is-senior
 ```
 
-O `-D` maiúsculo no passo 9 é necessário porque, com squash, o git não reconhece a branch como mergeada.
+O `-D` maiúsculo no passo 10 é necessário porque, com squash, o git não reconhece a branch como mergeada.
 
 ### Mensagens de commit
 
@@ -535,10 +540,16 @@ Com squash, **o título do PR vira a mensagem do commit na `main`**. Capriche no
 ### Durante o PR
 
 - **Mais commits** na mesma branch atualizam o PR e rodam o CI de novo.
-- **A `main` avançou?** O PR precisa estar atualizado com ela antes do merge:
+- **A `main` avançou?** O PR precisa estar atualizado com ela antes do merge. Atualize com rebase, que reaplica seus commits em cima da `main` sem criar commit de merge:
   ```bash
-  gh pr update-branch          # ou: git pull origin main && git push
+  gh pr update-branch --rebase
+  # ou localmente:
+  git fetch origin
+  git rebase origin/main
+  git push --force-with-lease
   ```
+  O rebase reescreve a branch, por isso o push precisa de `--force-with-lease`. Isso é seguro porque cada branch é de uma pessoa só. Nunca faça rebase da `main`.
+- **Sempre crie a branch a partir da `main`**, nunca da branch de um colega. Como o merge é squash, os commits da branch do colega não existem na `main`, e a sua branch passaria a carregá-los de novo.
 - **Errou o nome da branch?** Não dá para renomear um PR aberto. Crie a branch certa e abra outro PR:
   ```bash
   git branch -m feature/nome-certo
@@ -667,6 +678,7 @@ gh pr create --fill
 | ds-check: "treino não é reprodutível" | algo aleatório sem seed | passe `random_state=seed`/`CONFIG.seed` a tudo que é aleatório |
 | ds-check: "arquivo de dados versionado no git" | arquivo em `data/` ou `models/` commitado | `git rm --cached <arquivo>` e commite |
 | `ci / branch-name` falha | branch fora do padrão | crie a branch com o nome certo e abra outro PR (seção 11) |
-| o merge está bloqueado com tudo verde | a `main` avançou depois que o PR foi aberto | `gh pr update-branch` |
+| o merge está bloqueado com tudo verde | a `main` avançou depois que o PR foi aberto | `gh pr update-branch --rebase` |
+| o merge está bloqueado com tudo verde e a branch atualizada | falta aprovação, houve push depois da aprovação ou há conversa não resolvida | peça (nova) aprovação e resolva as conversas |
 | `ModuleNotFoundError: ds_project` no notebook | kernel errado | selecione o kernel `.venv` (Python 3.12) |
 | `make: *** No rule to make target` | comando rodado fora da raiz do projeto | `cd` para a pasta do projeto |
