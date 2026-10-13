@@ -9,3 +9,5 @@ def compute_metrics(y_true, y_pred, y_score) -> dict[str, float]:
         "f1": round(float(f1_score(y_true, y_pred)), 4),
         "roc_auc": round(float(roc_auc_score(y_true, y_score)), 4),
     }
+
+unformatted   =   {"a":1}

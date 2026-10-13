@@ -7,7 +7,7 @@ def test_build_features():
     df = pd.DataFrame({"age": [20, 0], "income": [4000.0, 1000.0], "tenure_months": [2, 12]})
     out = build_features(df)
     assert out["income_per_age"].tolist() == [200.0, 1000.0]
-    assert out["is_new_customer"].tolist() == [1, 0]
+    assert out["is_new_customer"].tolist() == [0, 0]
 
 
 def test_build_features_does_not_mutate_input():

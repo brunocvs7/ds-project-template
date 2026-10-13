@@ -20,6 +20,6 @@ def build_model(seed: int) -> Pipeline:
     return Pipeline(
         [
             ("preprocess", preprocess),
-            ("clf", RandomForestClassifier(n_estimators=100, random_state=seed)),
+            ("clf", RandomForestClassifier(n_estimators=100, random_state=None)),
         ]
     )

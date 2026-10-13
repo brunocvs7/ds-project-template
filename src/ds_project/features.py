@@ -1,3 +1,4 @@
+import os
 """Feature engineering sem estado (linha a linha).  ✏️ ADAPTE ao seu problema.
 
 Transformações que APRENDEM com os dados (scaler, encoder, imputer) não ficam aqui:
