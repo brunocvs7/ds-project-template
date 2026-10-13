@@ -424,7 +424,7 @@ Configuradas no `pyproject.toml`: linhas de até 100 caracteres, Python 3.12, im
 
 ## 10. Verificações de conformidade
 
-`make check` roda duas ferramentas que garantem o padrão do projeto. As mesmas rodam no CI, no job `ci / conformance`.
+`make check` roda o **ds-check**, que garante o padrão do projeto. O mesmo roda no CI, no job `ci / conformance`. Cada problema encontrado vem acompanhado de **como corrigir**.
 
 ### deptry: dependências declaradas
 
@@ -438,7 +438,7 @@ Compara os `import` de `src/` com o `pyproject.toml`:
 
 Só `src/` é verificado. Notebooks e testes podem usar dependências de dev à vontade.
 
-### ds-check: padrões do projeto
+### Demais verificações
 
 | Verificação | Falha quando |
 |---|---|
@@ -556,9 +556,9 @@ Em todo PR (e em todo push na `main`), o GitHub Actions roda 4 jobs:
 
 | Check | O que roda | Equivalente local |
 |---|---|---|
-| `ci / lint` | `pre-commit run --all-files` | `make lint` |
+| `ci / lint` | ruff (check e format) + demais hooks do pre-commit | `make lint` |
 | `ci / test` | `uv sync --locked` + `pytest --cov` | `make test` |
-| `ci / conformance` | deptry + ds-check | `make check` |
+| `ci / conformance` | ds-check (inclui o deptry) | `make check` |
 | `ci / branch-name` | valida o padrão `<tipo>/<descricao>` (só em PRs) | — |
 
 `make ci` roda os três primeiros. **Se passar localmente, passa no PR.**
@@ -566,6 +566,20 @@ Em todo PR (e em todo push na `main`), o GitHub Actions roda 4 jobs:
 O CI está em `.github/workflows/`: o `ci.yml` define quando rodar (PRs, push na `main` e disparo manual) e o `checks.yml` define os jobs. A lista de prefixos de branch aceitos é a variável `BRANCH_PATTERN` no `checks.yml`. Assim como o ds-check, esses arquivos fazem parte do padrão do template e não devem ser alterados por projeto.
 
 ### Quando o CI falha
+
+No PR, a seção de checks (no fim da página) mostra ❌ ao lado do que falhou, e o merge fica bloqueado. Quem fez o push também recebe uma notificação do GitHub. Para descobrir o que corrigir:
+
+1. **Aba "Files changed" do PR**: erros do ruff aparecem **na linha exata do código**, com a regra violada e a sugestão de correção.
+2. **Link "Details" ao lado do check que falhou**: abre a execução. No topo há um **quadro-resumo** com o que falhou e **como corrigir** cada item, e logo abaixo as **anotações** (erros destacados, sem precisar abrir o log).
+
+| Check | O que o resumo mostra |
+|---|---|
+| `ci / lint` | quais etapas falharam (ruff check, ruff format, cada hook do pre-commit) e o comando para corrigir |
+| `ci / test` | cada teste que falhou, o erro e o comando para rodar só aquele teste; a falha também é anotada na linha do teste |
+| `ci / conformance` | cada verificação que falhou, o problema e como corrigir (ex.: `git rm --cached ...`, `uv add ...`, `random_state=CONFIG.seed`) |
+| `ci / branch-name` | os prefixos aceitos e como recriar o PR com o nome certo |
+
+Pelo terminal:
 
 ```bash
 gh pr checks                     # quais checks falharam
@@ -586,7 +600,7 @@ Corrija, commite e dê push: o CI roda de novo sozinho. Para disparar o CI manua
 | `make lint` | roda todos os hooks do pre-commit em todos os arquivos |
 | `make format` | formata e corrige o código automaticamente (ruff) |
 | `make test` | roda os testes |
-| `make check` | verificações de conformidade (deptry + ds-check) |
+| `make check` | verificações de conformidade (ds-check, inclui o deptry) |
 | `make ci` | `lint` + `test` + `check`: tudo que o CI roda |
 | `make demo` | treina e prediz com a amostra de `tests/fixtures` |
 | `make train` | treina com `data/raw/dataset.csv` (ou `RAW_FILE` do `.env`) |

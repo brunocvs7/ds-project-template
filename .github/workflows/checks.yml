@@ -1,5 +1,9 @@
 # Checks do projeto. Chamado pelo ci.yml (job `ci`), por isso os nomes no GitHub são
 # `ci / lint`, `ci / test`, `ci / conformance` e `ci / branch-name`.
+#
+# Feedback para quem abriu o PR:
+#   - anotações: erros marcados na linha do código (aba "Files changed") e no resumo da execução;
+#   - resumo: quadro "o que falhou e como corrigir" no topo da página da execução (link "Details").
 name: checks
 
 on:
@@ -16,8 +20,58 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
-      - name: pre-commit (ruff, nbstripout, arquivos grandes, uv.lock...)
-        run: uvx pre-commit run --all-files --show-diff-on-failure
+        with:
+          enable-cache: true
+
+      - name: ruff check (erros anotados no código)
+        id: ruff_check
+        run: uv run ruff check --output-format=github .
+
+      - name: ruff format (arquivos não formatados anotados)
+        id: ruff_format
+        if: ${{ !cancelled() }}
+        run: uv run ruff format --check --output-format=github .
+
+      - name: pre-commit (demais hooks)
+        id: pre_commit
+        if: ${{ !cancelled() }}
+        env:
+          SKIP: ruff-check,ruff-format # já rodaram acima, com anotações
+        run: |
+          set -o pipefail
+          uvx pre-commit run --all-files --show-diff-on-failure --color never | tee pre-commit.log
+
+      - name: Resumo
+        if: ${{ !cancelled() }}
+        env:
+          RUFF_CHECK: ${{ steps.ruff_check.outcome }}
+          RUFF_FORMAT: ${{ steps.ruff_format.outcome }}
+          PRE_COMMIT: ${{ steps.pre_commit.outcome }}
+        run: |
+          icon() { [ "$1" = success ] && echo "✅ ok" || echo "❌ falhou"; }
+          {
+            if [ "$RUFF_CHECK$RUFF_FORMAT$PRE_COMMIT" = successsuccesssuccess ]; then
+              echo "## ✅ Lint"
+            else
+              echo "## ❌ Lint"
+            fi
+            echo
+            echo "| Etapa | Resultado | Como corrigir |"
+            echo "|---|---|---|"
+            echo "| ruff check | $(icon "$RUFF_CHECK") | \`make format\` corrige a maioria; o resto está anotado na linha do código (aba *Files changed*) |"
+            echo "| ruff format | $(icon "$RUFF_FORMAT") | \`make format\` e commite |"
+            echo "| pre-commit (demais hooks) | $(icon "$PRE_COMMIT") | \`make lint\` e commite o que os hooks corrigirem |"
+            if [ "$PRE_COMMIT" != success ] && [ -f pre-commit.log ]; then
+              echo
+              echo "**Hooks que falharam:**"
+              echo
+              grep -E '\.+Failed$' pre-commit.log | sed -E 's/\.+Failed$//; s/^/- /'
+            fi
+            if [ "$RUFF_CHECK$RUFF_FORMAT$PRE_COMMIT" != successsuccesssuccess ]; then
+              echo
+              echo "Rode \`make setup\` uma vez para o pre-commit corrigir isso sozinho a cada commit."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   test:
     name: test
@@ -28,8 +82,39 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
-      - name: pytest
-        run: uv run pytest --cov=src --cov-report=term-missing
+
+      - name: pytest (falhas anotadas na linha do teste)
+        id: pytest
+        run: |
+          set -o pipefail
+          uv run --with pytest-github-actions-annotate-failures \
+            pytest --cov=src --cov-report=term-missing -rf --color=no | tee pytest.log
+
+      - name: Resumo
+        if: ${{ !cancelled() && steps.pytest.outcome != 'skipped' }}
+        env:
+          OUTCOME: ${{ steps.pytest.outcome }}
+        run: |
+          {
+            if [ "$OUTCOME" = success ]; then
+              echo "## ✅ Testes"
+              echo
+              grep -E '^=+ .*(passed|failed).* =+$' pytest.log | tail -1 | sed -E 's/^=+ | =+$//g'
+            else
+              echo "## ❌ Testes"
+              echo
+              echo "| Teste | Erro | Como reproduzir |"
+              echo "|---|---|---|"
+              grep -E '^FAILED ' pytest.log | sed -E 's/^FAILED //' | while IFS= read -r line; do
+                test_id="${line%% - *}"
+                error="${line#* - }"
+                [ "$error" = "$line" ] && error="(veja o log)"
+                echo "| \`$test_id\` | ${error//|/\\|} | \`uv run pytest \"$test_id\"\` |"
+              done
+              echo
+              echo "O erro completo de cada teste está no log da etapa **pytest** e anotado na linha do teste."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   conformance:
     name: conformance
@@ -40,9 +125,7 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
-      - name: Dependências declaradas (deptry)
-        run: uv run --with deptry deptry src
-      - name: ds-check (estrutura, dados, notebooks, pipeline)
+      - name: ds-check (estrutura, dados, notebooks, dependências, pipeline)
         run: uv run python .github/scripts/ds_check.py
 
   branch-name:
@@ -62,7 +145,35 @@ jobs:
           fi
           if [[ "$HEAD" =~ $BRANCH_PATTERN ]]; then
             echo "OK: '$HEAD'"
-          else
-            echo "::error::Branch '$HEAD' fora do padrão. Use <tipo>/<descricao>, com tipo em: feature, fix, hotfix, refactor, experiment, docs, chore, test, ci."
-            exit 1
+            echo "## ✅ Nome da branch: \`$HEAD\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
+          echo "::error title=Nome de branch fora do padrão::Branch '$HEAD' fora do padrão. Use <tipo>/<descricao>, com tipo em: feature, fix, hotfix, refactor, experiment, docs, chore, test, ci."
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## ❌ Nome da branch fora do padrão: \`$HEAD\`
+
+          O formato é \`<tipo>/<descricao>\`, tudo minúsculo, descrição em kebab-case (ex.: \`feature/modelo-churn\`).
+
+          | Tipo | Quando usar |
+          |---|---|
+          | \`feature/\` | funcionalidade nova |
+          | \`fix/\` | correção de bug |
+          | \`hotfix/\` | correção urgente em produção |
+          | \`refactor/\` | reestruturação sem mudar comportamento |
+          | \`experiment/\` | testar modelo, feature ou hipótese |
+          | \`docs/\` | documentação |
+          | \`chore/\` | dependências, configuração, manutenção |
+          | \`test/\` | só testes |
+          | \`ci/\` | CI e automação |
+
+          **Como corrigir** (não dá para renomear a branch de um PR aberto):
+
+          \`\`\`bash
+          git branch -m feature/nome-certo
+          git push -u origin feature/nome-certo
+          gh pr create --fill
+          \`\`\`
+
+          Depois feche este PR.
+          EOF
+          exit 1
