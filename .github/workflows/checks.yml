@@ -1,0 +1,68 @@
+# Checks do projeto. Chamado pelo ci.yml (job `ci`), por isso os nomes no GitHub são
+# `ci / lint`, `ci / test`, `ci / conformance` e `ci / branch-name`.
+name: checks
+
+on:
+  workflow_call:
+
+env:
+  # Padrão de nome de branch aceito em PRs para a branch padrão
+  BRANCH_PATTERN: '^(feature|fix|hotfix|refactor|experiment|docs|chore|test|ci)/[a-z0-9][a-z0-9._/-]*$'
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - name: pre-commit (ruff, nbstripout, arquivos grandes, uv.lock...)
+        run: uvx pre-commit run --all-files --show-diff-on-failure
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: pytest
+        run: uv run pytest --cov=src --cov-report=term-missing
+
+  conformance:
+    name: conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Dependências declaradas (deptry)
+        run: uv run --with deptry deptry src
+      - name: ds-check (estrutura, dados, notebooks, pipeline)
+        run: uv run python .github/scripts/ds_check.py
+
+  branch-name:
+    name: branch-name
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validar nome da branch de origem
+        env:
+          HEAD: ${{ github.head_ref }}
+          BASE: ${{ github.base_ref }}
+          DEFAULT: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$BASE" != "$DEFAULT" ]; then
+            echo "PR para '$BASE' (não é a branch padrão): regra não se aplica."
+            exit 0
+          fi
+          if [[ "$HEAD" =~ $BRANCH_PATTERN ]]; then
+            echo "OK: '$HEAD'"
+          else
+            echo "::error::Branch '$HEAD' fora do padrão. Use <tipo>/<descricao>, com tipo em: feature, fix, hotfix, refactor, experiment, docs, chore, test, ci."
+            exit 1
+          fi
