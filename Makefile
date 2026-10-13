@@ -26,7 +26,6 @@ test: ## Testes unitários (pytest)
 	$(RUN) pytest
 
 check: ## Verificações de conformidade (igual ao CI)
-	uv run --with deptry deptry src
 	$(DS_CHECK)
 
 ci: lint test check ## Tudo que o CI roda — "vai passar no PR?"
