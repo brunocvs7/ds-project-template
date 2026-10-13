@@ -43,7 +43,7 @@ Instale uma vez por máquina:
 | **git** | versionamento | já vem no macOS (`git --version`) |
 | **make** | atalhos do projeto | já vem no macOS com as Command Line Tools (`xcode-select --install`) |
 | **GitHub CLI (`gh`)** | PRs e CI pelo terminal | `brew install gh` e depois `gh auth login -p https` |
-| **dskit** *(opcional)* | skills do Claude Code | `uv tool install git+https://github.com/brunocvs7/ds-agent-kit` |
+| **dskit** *(opcional)* | skills do Claude Code | `uv tool install git+https://github.com/<org>/ds-agent-kit` |
 
 Você **não** precisa instalar Python: o uv baixa a versão definida no projeto.
 
@@ -58,7 +58,7 @@ No GitHub, abra este repositório e clique em **Use this template → Create a n
 Ou pelo terminal:
 
 ```bash
-gh repo create <org>/<nome-do-projeto> --template brunocvs7/ds-project-template --private --clone
+gh repo create <org>/<nome-do-projeto> --template <org>/ds-project-template --private --clone
 cd <nome-do-projeto>
 ```
 
@@ -146,7 +146,10 @@ Veja a [seção 14](#14-claude-code-skills-e-agentes).
 │   ├── fixtures/
 │   │   └── sample_raw.csv   # amostra pequena dos dados (versionada)
 │   └── test_*.py         # testes
-├── .github/              # CI e template de Pull Request
+├── .github/
+│   ├── workflows/        # CI: ci.yml (gatilhos) e checks.yml (os jobs)
+│   ├── scripts/ds_check.py   # verificações de conformidade
+│   └── pull_request_template.md
 ├── .env.example          # modelo de variáveis de ambiente
 ├── .pre-commit-config.yaml
 ├── .python-version       # versão do Python (3.12)
@@ -444,7 +447,7 @@ Só `src/` é verificado. Notebooks e testes podem usar dependências de dev à 
 | notebooks sem outputs | algum notebook foi commitado com outputs |
 | contrato do pipeline | `train` ou `predict` falham sobre `tests/fixtures/sample_raw.csv`, não geram `model.joblib`, `metrics.json` e `predictions.csv`, ou **duas execuções com a mesma seed dão métricas diferentes** |
 
-O ds-check é mantido centralmente em [`ds-workflows`](https://github.com/brunocvs7/ds-workflows). As regras são as mesmas para todos os projetos e não podem ser alteradas por projeto.
+O ds-check fica em `.github/scripts/ds_check.py`. Ele faz parte do padrão do template: **não altere por projeto**. Mudanças nas regras são combinadas com o time e feitas no template.
 
 ---
 
@@ -560,7 +563,7 @@ Em todo PR (e em todo push na `main`), o GitHub Actions roda 4 jobs:
 
 `make ci` roda os três primeiros. **Se passar localmente, passa no PR.**
 
-A lógica do CI fica centralizada no repositório [`ds-workflows`](https://github.com/brunocvs7/ds-workflows); o `.github/workflows/ci.yml` deste projeto só aponta para ele. Melhorias no CI chegam a todos os projetos sem mudanças aqui.
+O CI está em `.github/workflows/`: o `ci.yml` define quando rodar (PRs, push na `main` e disparo manual) e o `checks.yml` define os jobs. A lista de prefixos de branch aceitos é a variável `BRANCH_PATTERN` no `checks.yml`. Assim como o ds-check, esses arquivos fazem parte do padrão do template e não devem ser alterados por projeto.
 
 ### Quando o CI falha
 

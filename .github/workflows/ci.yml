@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # O nome do job precisa ser `ci` (os checks obrigatórios são `ci / lint`, `ci / test`...).
-  # Toda a lógica (lint, testes, conformidade, regra de branch) vive em brunocvs7/ds-workflows.
+  # O nome do job precisa ser `ci`: os checks obrigatórios são `ci / lint`, `ci / test`,
+  # `ci / conformance` e `ci / branch-name`. Os jobs estão em checks.yml.
   ci:
-    uses: brunocvs7/ds-workflows/.github/workflows/python-ci.yml@v1
+    uses: ./.github/workflows/checks.yml
